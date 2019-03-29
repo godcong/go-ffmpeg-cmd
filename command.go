@@ -1,5 +1,11 @@
 package cmd
 
+import (
+	"fmt"
+	"os"
+	"os/exec"
+)
+
 // Command ...
 type Command struct {
 	Name string
@@ -32,18 +38,18 @@ func (c *Command) Codec() *Command {
 	return c
 }
 
-// String ...
-type String func(out *string)
-
 // Strings ...
-func Strings(in string) String {
+type Strings func(out *string)
+
+// String ...
+func String(in string) Strings {
 	return func(out *string) {
 		*out = in
 	}
 }
 
 // CodecVideo ...
-func (c *Command) CodecVideo(options ...String) *Command {
+func (c *Command) CodecVideo(options ...Strings) *Command {
 	option := "copy"
 	for _, v := range options {
 		v(&option)
@@ -53,7 +59,7 @@ func (c *Command) CodecVideo(options ...String) *Command {
 }
 
 // CodecAudio ...
-func (c *Command) CodecAudio(options ...String) *Command {
+func (c *Command) CodecAudio(options ...Strings) *Command {
 	option := "copy"
 	for _, v := range options {
 		v(&option)
@@ -82,6 +88,57 @@ func (c *Command) HlsListSize(s string) *Command {
 
 // HlsSegmentFilename ...
 func (c *Command) HlsSegmentFilename(name string) *Command {
-	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", n}
+	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", name}
 	return c
+}
+
+// HlsKeyInfoFile ...
+func (c *Command) HlsKeyInfoFile(file string) *Command {
+	c.Opts["hls_key_info_file"] = []string{"-hls_key_info_file", file}
+	return c
+}
+
+// BitStreamFiltersVideo ...
+func (c *Command) BitStreamFiltersVideo(f string) *Command {
+	c.Opts["bsfv"] = []string{"-bsf:v", f}
+	return c
+}
+
+// Output ...
+func (c *Command) Output(path string) *Command {
+	c.Opts["output"] = []string{path}
+	return c
+}
+
+// Options ...
+func (c *Command) Options() []string {
+	var options []string
+	input, b := c.Opts["input"]
+	if !b {
+		return nil
+	}
+	output, b := c.Opts["output"]
+	if !b {
+		return nil
+	}
+	delete(c.Opts, "input")
+	delete(c.Opts, "output")
+	options = append(options, input...)
+	for _, v := range c.Opts {
+		options = append(options, v...)
+	}
+	options = append(options, output...)
+	return options
+}
+
+// Run ...
+func (c *Command) Run() (string, error) {
+	cmd := exec.Command(c.Name, c.Options()...)
+	cmd.Env = os.Environ()
+	fmt.Println(cmd.Args)
+	stdout, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(stdout), err
+	}
+	return string(stdout), nil
 }
