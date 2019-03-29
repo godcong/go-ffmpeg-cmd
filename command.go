@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,19 +19,25 @@ type Command struct {
 }
 
 // New ...
-func New(name string) *Command {
+func New(name string, path string) *Command {
 	return &Command{
-		Name: name,
-		Opts: make(map[string][]string),
+		Name:    name,
+		OutPath: path,
+		Opts:    make(map[string][]string),
 	}
 }
 
 // Default ...
 func Default() *Command {
-	return New("ffmpeg").
-		Ignore().CodecAudio(String("aac")).CodecVideo(String("libx264")).
+	return New("ffmpeg", "").
+		Ignore().CodecAudio().CodecVideo().
 		BitStreamFiltersVideo("h264_mp4toannexb").Format("hls").HlsTime("10").
-		HlsListSize("0").HlsSegmentFilename("media-%03d.ts")
+		HlsListSize("0")
+}
+
+// Split ...
+func (c *Command) Split(path string) *Command {
+	return c.SetPath(path).HlsSegmentFilename("media-%03d.ts").Output("media.m3u8")
 }
 
 // SetPath ...
@@ -104,7 +114,8 @@ func (c *Command) HlsListSize(s string) *Command {
 
 // HlsSegmentFilename ...
 func (c *Command) HlsSegmentFilename(name string) *Command {
-	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", filepath.Join(c.OutPath, name)}
+	_, file := filepath.Split(name)
+	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", filepath.Join(c.OutPath, file)}
 	return c
 }
 
@@ -121,8 +132,9 @@ func (c *Command) BitStreamFiltersVideo(f string) *Command {
 }
 
 // Output ...
-func (c *Command) Output(path string, name string) *Command {
-	c.Opts["output"] = []string{filepath.Join(c.OutPath + name)}
+func (c *Command) Output(name string) *Command {
+	_, file := filepath.Split(name)
+	c.Opts["output"] = []string{filepath.Join(c.OutPath + file)}
 	return c
 }
 
@@ -157,4 +169,51 @@ func (c *Command) Run() (string, error) {
 		return string(stdout), err
 	}
 	return string(stdout), nil
+}
+
+// RunContext ...
+func (c *Command) RunContext(ctx context.Context, s chan<- string, close chan<- bool) (e error) {
+	cmd := exec.CommandContext(ctx, c.Name, c.Options()...)
+	cmd.Env = os.Environ()
+	//显示运行的命令
+	log.Println("command:", cmd.Args)
+	defer func() {
+		close <- true
+		if e != nil {
+			panic(e)
+		}
+	}()
+	stdout, e := cmd.StdoutPipe()
+	if e != nil {
+		return e
+	}
+
+	stderr, e := cmd.StderrPipe()
+	if e != nil {
+		return e
+	}
+
+	e = cmd.Start()
+	if e != nil {
+		return e
+	}
+
+	reader := bufio.NewReader(io.MultiReader(stdout, stderr))
+	//实时循环读取输出流中的一行内容
+	for {
+		line, e := reader.ReadString('\n')
+		if e != nil || io.EOF == e {
+			log.Println("end", cmd.Args, e)
+			break
+		}
+		if line != "" {
+			s <- "lineinfo:" + line
+		}
+	}
+
+	e = cmd.Wait()
+	if e != nil {
+		return e
+	}
+	return nil
 }
