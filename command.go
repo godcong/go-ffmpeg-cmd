@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 // Command ...
 type Command struct {
-	Name string
-	Opts map[string][]string
+	Name    string
+	OutPath string
+	Opts    map[string][]string
 }
 
 // New ...
@@ -18,6 +20,20 @@ func New(name string) *Command {
 		Name: name,
 		Opts: make(map[string][]string),
 	}
+}
+
+// Default ...
+func Default() *Command {
+	return New("ffmpeg").
+		Ignore().CodecAudio(String("aac")).CodecVideo(String("libx264")).
+		BitStreamFiltersVideo("h264_mp4toannexb").Format("hls").HlsTime("10").
+		HlsListSize("0").HlsSegmentFilename("media-%03d.ts")
+}
+
+// SetPath ...
+func (c *Command) SetPath(path string) *Command {
+	c.OutPath = path
+	return c
 }
 
 // Ignore ...
@@ -88,7 +104,7 @@ func (c *Command) HlsListSize(s string) *Command {
 
 // HlsSegmentFilename ...
 func (c *Command) HlsSegmentFilename(name string) *Command {
-	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", name}
+	c.Opts["hls_segment_filename"] = []string{"-hls_segment_filename", filepath.Join(c.OutPath, name)}
 	return c
 }
 
@@ -105,8 +121,8 @@ func (c *Command) BitStreamFiltersVideo(f string) *Command {
 }
 
 // Output ...
-func (c *Command) Output(path string) *Command {
-	c.Opts["output"] = []string{path}
+func (c *Command) Output(path string, name string) *Command {
+	c.Opts["output"] = []string{filepath.Join(c.OutPath + name)}
 	return c
 }
 
