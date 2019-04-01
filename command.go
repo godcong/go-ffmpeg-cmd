@@ -3,10 +3,10 @@ package cmd
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"golang.org/x/xerrors"
 	"io"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -166,7 +166,7 @@ func (c *Command) Options() []string {
 func (c *Command) Run() (string, error) {
 	cmd := exec.Command(c.Name, c.Options()...)
 	cmd.Env = os.Environ()
-	fmt.Println(cmd.Args)
+	log.Debug("run:", cmd.Args)
 	stdout, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(stdout), err
@@ -179,9 +179,9 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 	cmd := exec.CommandContext(ctx, c.Name, c.Options()...)
 	cmd.Env = os.Environ()
 	//显示运行的命令
-	log.Println("command:", cmd.Args)
+	log.Debug("run:", cmd.Args)
 	defer func() {
-		log.Println("close")
+		log.Debug("close")
 		if close != nil {
 			close <- true
 		}
@@ -199,7 +199,8 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 	if e != nil {
 		return e
 	}
-	log.Println("start:")
+
+	log.Debug("start")
 	e = cmd.Start()
 	if e != nil {
 		return e
@@ -215,9 +216,10 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 		default:
 			lines, _, e := reader.ReadLine()
 			if e != nil || io.EOF == e {
-				log.Println("end:", cmd.Args, e)
+				log.Debug("end:", cmd.Args, e)
 				goto END
 			}
+			log.Debug("send:", string(lines))
 			if strings.TrimSpace(string(lines)) != "" {
 				if info != nil {
 					info <- string(lines)
