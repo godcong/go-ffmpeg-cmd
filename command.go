@@ -21,22 +21,21 @@ type Command struct {
 }
 
 // New ...
-func New(name string, path string) *Command {
+func New(name string) *Command {
 	return &Command{
-		Name:    name,
-		OutPath: path,
-		Opts:    make(map[string][]string),
+		Name: name,
+		Opts: make(map[string][]string),
 	}
 }
 
 // NewFFMPEG ...
-func NewFFMPEG(path string) *Command {
-	return New("ffmpeg", path)
+func NewFFMPEG() *Command {
+	return New("ffmpeg")
 }
 
 // Default ...
 func Default() *Command {
-	return New("ffmpeg", "").
+	return New("ffmpeg").
 		Ignore().CodecAudio(String("aac")).CodecVideo(String("libx264")).
 		BitStreamFiltersVideo("h264_mp4toannexb").Format("hls").HlsTime("10").
 		HlsListSize("0")
