@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"golang.org/x/xerrors"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Command ...
@@ -30,7 +32,7 @@ func New(name string, path string) *Command {
 // Default ...
 func Default() *Command {
 	return New("ffmpeg", "").
-		Ignore().CodecAudio().CodecVideo().
+		Ignore().CodecAudio(String("aac")).CodecVideo(String("libx264")).
 		BitStreamFiltersVideo("h264_mp4toannexb").Format("hls").HlsTime("10").
 		HlsListSize("0")
 }
@@ -134,7 +136,7 @@ func (c *Command) BitStreamFiltersVideo(f string) *Command {
 // Output ...
 func (c *Command) Output(name string) *Command {
 	_, file := filepath.Split(name)
-	c.Opts["output"] = []string{filepath.Join(c.OutPath + file)}
+	c.Opts["output"] = []string{filepath.Join(c.OutPath, file)}
 	return c
 }
 
@@ -149,10 +151,11 @@ func (c *Command) Options() []string {
 	if !b {
 		return nil
 	}
-	delete(c.Opts, "input")
-	delete(c.Opts, "output")
 	options = append(options, input...)
-	for _, v := range c.Opts {
+	for idx, v := range c.Opts {
+		if idx == "input" || idx == "output" {
+			continue
+		}
 		options = append(options, v...)
 	}
 	options = append(options, output...)
@@ -172,13 +175,17 @@ func (c *Command) Run() (string, error) {
 }
 
 // RunContext ...
-func (c *Command) RunContext(ctx context.Context, s chan<- string, close chan<- bool) (e error) {
+func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan<- bool) (e error) {
 	cmd := exec.CommandContext(ctx, c.Name, c.Options()...)
 	cmd.Env = os.Environ()
 	//显示运行的命令
 	log.Println("command:", cmd.Args)
 	defer func() {
-		close <- true
+		log.Println("close")
+		if close != nil {
+			close <- true
+		}
+
 		if e != nil {
 			panic(e)
 		}
@@ -192,25 +199,33 @@ func (c *Command) RunContext(ctx context.Context, s chan<- string, close chan<- 
 	if e != nil {
 		return e
 	}
-
+	log.Println("start:")
 	e = cmd.Start()
 	if e != nil {
 		return e
 	}
 
-	reader := bufio.NewReader(io.MultiReader(stdout, stderr))
+	reader := bufio.NewReader(io.MultiReader(stderr, stdout))
 	//实时循环读取输出流中的一行内容
 	for {
-		line, e := reader.ReadString('\n')
-		if e != nil || io.EOF == e {
-			log.Println("end", cmd.Args, e)
-			break
-		}
-		if line != "" {
-			s <- "lineinfo:" + line
+		select {
+		case <-ctx.Done():
+			e = xerrors.New("exit with done")
+			return
+		default:
+			lines, _, e := reader.ReadLine()
+			if e != nil || io.EOF == e {
+				log.Println("end:", cmd.Args, e)
+				goto END
+			}
+			if strings.TrimSpace(string(lines)) != "" {
+				if info != nil {
+					info <- string(lines)
+				}
+			}
 		}
 	}
-
+END:
 	e = cmd.Wait()
 	if e != nil {
 		return e

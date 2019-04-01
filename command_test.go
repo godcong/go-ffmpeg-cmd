@@ -8,23 +8,37 @@ import (
 
 // TestCommand_Run ...
 func TestCommand_Run(t *testing.T) {
-	s := make(chan string)
+	ctx := context.Background()
+	s := make(chan string, 1024)
 	b := make(chan bool)
 	command := Default()
 	cmd := command.Input("D:\\video\\12.28.mp4").
 		Split("D:\\video\\output")
-	go cmd.RunContext(context.Background(), s, b)
 
+	go func() {
+		e := cmd.RunContext(ctx, s, b)
+		//(ctx, s, b)
+		if e != nil {
+			log.Println("error:", e)
+		}
+	}()
 	for {
 		select {
 		case v := <-s:
-			log.Println("loading", v)
+			if v != "" {
+				log.Print(v)
+			}
 		case c := <-b:
 			if c == true {
 				close(s)
-				break
+				return
 			}
+		case <-ctx.Done():
+			log.Println("done")
+			log.Println(ctx.Err())
+			return
+		default:
+			//log.Println("waiting:...")
 		}
 	}
-
 }
