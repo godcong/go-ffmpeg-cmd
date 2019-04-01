@@ -29,6 +29,11 @@ func New(name string, path string) *Command {
 	}
 }
 
+// NewFFMPEG ...
+func NewFFMPEG(path string) *Command {
+	return New("ffmpeg", path)
+}
+
 // Default ...
 func Default() *Command {
 	return New("ffmpeg", "").
