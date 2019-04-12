@@ -90,6 +90,12 @@ func (c *Command) CodecVideo(options ...Strings) *Command {
 	return c
 }
 
+// Strict ...
+func (c *Command) Strict() *Command {
+	c.Opts["strict"] = []string{"-strict", "-2"}
+	return c
+}
+
 // CodecAudio ...
 func (c *Command) CodecAudio(options ...Strings) *Command {
 	option := "copy"
