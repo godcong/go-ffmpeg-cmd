@@ -86,7 +86,7 @@ func (c *Command) CodecVideo(options ...Strings) *Command {
 	for _, v := range options {
 		v(&option)
 	}
-	c.Opts["cv"] = []string{"-c:v", option}
+	c.Opts["cv"] = append(c.Opts["cv"], []string{"-c:v", option}...)
 	return c
 }
 
@@ -134,6 +134,12 @@ func (c *Command) HlsSegmentFilename(name string) *Command {
 // HlsKeyInfoFile ...
 func (c *Command) HlsKeyInfoFile(file string) *Command {
 	c.Opts["hls_key_info_file"] = []string{"-hls_key_info_file", file}
+	return c
+}
+
+// Hwaccel ...
+func (c *Command) Hwaccel() *Command {
+	c.Opts["hwaccel"] = []string{"-hwaccel", "cuvid"}
 	return c
 }
 
