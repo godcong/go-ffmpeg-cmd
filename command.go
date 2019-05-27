@@ -28,9 +28,14 @@ func New(name string) *Command {
 	}
 }
 
-// NewFFMPEG ...
-func NewFFMPEG() *Command {
+// NewFFMpeg ...
+func NewFFMpeg() *Command {
 	return New("ffmpeg")
+}
+
+// NewFFProbe ...
+func NewFFProbe() *Command {
+	return New("ffprobe")
 }
 
 // Default ...
