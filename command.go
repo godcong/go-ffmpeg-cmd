@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"github.com/godcong/go-trait"
-	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 	"io"
 	"os"
@@ -13,7 +12,7 @@ import (
 	"strings"
 )
 
-var log = trait.NewZapSugar(zap.String("package", "go-ffmpeg-cmd"))
+var log = trait.NewZapSugar()
 
 // Command ...
 type Command struct {
@@ -102,7 +101,7 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 	cmd := exec.CommandContext(ctx, c.CMD(), c.Args...)
 
 	//显示运行的命令
-	log.Debug("run:", cmd.Args)
+	log.Info("run:", cmd.Args)
 	defer func() {
 		log.Debug("close")
 		if close != nil {
