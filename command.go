@@ -72,13 +72,9 @@ func GetCurrentDir() string {
 // Run ...
 func (c *Command) Run() (string, error) {
 	cmd := exec.Command(c.CMD(), c.Args...)
-	path := os.Getenv("PATH")
-	if err := os.Setenv("PATH", path+":"+GetCurrentDir()); err != nil {
-		err = xerrors.Errorf("PATH error:%+v", err)
-		return "", err
-	}
-	cmd.Env = os.Environ()
-	log.Debug("run:", cmd.Args)
+	cmd.Env = c.Env()
+	//显示运行的命令
+	log.With("run", "Run").Info(cmd.Args)
 	stdout, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(stdout), err
@@ -101,7 +97,7 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 	cmd := exec.CommandContext(ctx, c.CMD(), c.Args...)
 
 	//显示运行的命令
-	log.Info("run:", cmd.Args)
+	log.With("run", "RunContext").Info(cmd.Args)
 	defer func() {
 		log.Debug("close")
 		if close != nil {
