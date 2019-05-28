@@ -134,10 +134,8 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 		default:
 			lines, _, e := reader.ReadLine()
 			if e != nil || io.EOF == e {
-				log.Debug("end:", cmd.Args, e)
 				goto END
 			}
-			log.Debug("send:", string(lines))
 			if strings.TrimSpace(string(lines)) != "" {
 				if info != nil {
 					info <- string(lines)
