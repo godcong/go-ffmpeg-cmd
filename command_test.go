@@ -1,44 +1,16 @@
 package cmd
 
 import (
-	"context"
-	"log"
+	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
-// TestCommand_Run ...
-func TestCommand_Run(t *testing.T) {
-	ctx := context.Background()
-	s := make(chan string, 1024)
-	b := make(chan bool)
-	command := Default()
-	cmd := command.Input("D:\\video\\12.28.mp4").
-		Split("D:\\video\\output")
-
-	go func() {
-		e := cmd.RunContext(ctx, s, b)
-		//(ctx, s, b)
-		if e != nil {
-			log.Println("error:", e)
-		}
-	}()
-	for {
-		select {
-		case v := <-s:
-			if v != "" {
-				log.Print(v)
-			}
-		case c := <-b:
-			if c == true {
-				close(s)
-				return
-			}
-		case <-ctx.Done():
-			log.Println("done")
-			log.Println(ctx.Err())
-			return
-		default:
-			//log.Println("waiting:...")
-		}
-	}
+// TestFFProbeStreamFormat ...
+func TestFFProbeStreamFormat(t *testing.T) {
+	format, _ := FFProbeStreamFormat("D:\\video\\周杰伦唱歌贼难听.mp4")
+	v, _ := json.Marshal(format)
+	ioutil.WriteFile("d:\\test.log", v, os.ModePerm)
+	t.Log(string(v))
 }

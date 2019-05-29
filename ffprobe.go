@@ -1,6 +1,12 @@
 package cmd
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+)
 
 // StreamFormat ...
 type StreamFormat struct {
@@ -84,6 +90,29 @@ type StreamTags struct {
 	HandlerName string `json:"handler_name"`
 }
 
+var resolution = []int{120, 144, 160, 200, 240, 320, 360, 480, 540, 576, 600, 640, 720, 768, 800, 864, 900, 960, 1024, 1050, 1080, 1152, 1200, 1280, 1440, 1536, 1600, 1620, 1800, 1824, 1920, 2048, 2160, 2400, 2560, 2880, 3072, 3200, 4096, 4320, 4800}
+
+func getResolutionIndex(n int64, sta, end int) int {
+	//log.Infof("%d,%d,%d", n, sta, end)
+	//if int64(resolution[sta]) == n {
+	//	return sta
+	//}
+	if end == -1 {
+		end = len(resolution)
+	}
+
+	if idx := (sta + end) / 2; idx > sta {
+		if int64(resolution[idx]) > n {
+			return getResolutionIndex(n, sta, idx)
+		}
+		return getResolutionIndex(n, idx, end)
+	}
+	if int64(resolution[sta]) != n && sta < len(resolution)-1 {
+		return sta + 1
+	}
+	return sta
+}
+
 // FFProbeStreamFormat ...
 func FFProbeStreamFormat(filename string) (*StreamFormat, error) {
 	probe := NewFFProbe()
@@ -98,4 +127,111 @@ func FFProbeStreamFormat(filename string) (*StreamFormat, error) {
 		return nil, e
 	}
 	return &sf, nil
+}
+
+// Resolution ...
+func (f *StreamFormat) Resolution() string {
+	idx := 0
+	for _, s := range f.Streams {
+		if s.CodecType == "video" {
+			if s.Height != nil {
+				idx = getResolutionIndex(*s.Height, 0, -1)
+				break
+			}
+
+		}
+	}
+	return strconv.FormatInt(int64(resolution[idx]), 10) + "P"
+}
+
+// Video ...
+func (f *StreamFormat) Video() *Stream {
+	for _, s := range f.Streams {
+		if s.CodecType == "video" {
+			return &s
+		}
+	}
+	return nil
+}
+
+// Audio ...
+func (f *StreamFormat) Audio() *Stream {
+	for _, s := range f.Streams {
+		if s.CodecType == "audio" {
+			return &s
+		}
+	}
+	return nil
+}
+
+// NameAnalyze 解析
+func (f *StreamFormat) NameAnalyze() *FileInfo {
+	return f.Format.NameAnalyze()
+}
+
+// FileInfo ...
+type FileInfo struct {
+	Ext       string //扩展名
+	Caption   string //字幕
+	Language  string //语种
+	Audio     string //音频
+	Video     string //视频
+	Sharpness string //清晰度
+	Date      string //年份
+	CName     string //中文名
+	EName     string //英文名
+	Prefix    string //前缀(广告信息)
+}
+
+// ExtIdx ...
+const (
+	CNameIdx = iota
+	ExtIdx
+	CaptionIdx
+	LanguageIdx
+	AudioIdx
+	VideoIdx
+	SharpnessIdx
+	DataIdx
+	ENameIdx
+	MaxSizeIdx
+)
+
+// NameAnalyze ...
+func (f *Format) NameAnalyze() *FileInfo {
+	return NameAnalyze(f.Filename)
+}
+
+// NameAnalyze ...
+func NameAnalyze(filename string) *FileInfo {
+	_, name := filepath.Split(filename)
+	compile, e := regexp.Compile("^\\[(.)+\\]")
+	if e != nil {
+		return nil
+	}
+	prefix := compile.FindString(name)
+	name = compile.ReplaceAllString(name, "")
+	n := strings.Split(name, ".")
+	size := len(n)
+	if size < MaxSizeIdx-1 {
+		return nil
+	}
+	cname := n[CNameIdx]
+	ename := ""
+	if size-ENameIdx > CNameIdx {
+		ename = strings.Join(n[CNameIdx+1:size-DataIdx], ".")
+	}
+
+	return &FileInfo{
+		Ext:       n[size-ExtIdx],
+		Caption:   n[size-CaptionIdx],
+		Language:  n[size-LanguageIdx],
+		Audio:     n[size-AudioIdx],
+		Video:     n[size-VideoIdx],
+		Sharpness: n[size-SharpnessIdx],
+		Date:      n[size-DataIdx],
+		CName:     cname,
+		EName:     ename,
+		Prefix:    prefix,
+	}
 }
