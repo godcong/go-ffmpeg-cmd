@@ -202,6 +202,26 @@ type FileInfo struct {
 	Prefix    string //前缀(广告信息)
 }
 
+// ToString ...
+func (info *FileInfo) ToString() string {
+	var infos []string
+	if info.Prefix != "" {
+		infos = append(infos, info.Prefix)
+	}
+	infos = append(infos, info.CName)
+	if info.EName != "" {
+		infos = append(infos, info.EName)
+	}
+	infos = append(infos, info.Date)
+	infos = append(infos, info.Sharpness)
+	infos = append(infos, info.Video)
+	infos = append(infos, info.Audio)
+	infos = append(infos, info.Language)
+	infos = append(infos, info.Caption)
+	infos = append(infos, info.Ext)
+	return strings.Join(infos, ".")
+}
+
 // ExtIdx ...
 const (
 	CNameIdx = iota
