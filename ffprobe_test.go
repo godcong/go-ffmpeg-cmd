@@ -1,6 +1,9 @@
 package cmd
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 // TestFormat_NameAnalyze ...
 func TestFormat_NameAnalyze(t *testing.T) {
@@ -10,7 +13,8 @@ func TestFormat_NameAnalyze(t *testing.T) {
 		return
 	}
 	t.Log(sf1.Format)
-	analyze := sf1.NameAnalyze()
+	_ = os.Rename("d:\\video\\周杰伦唱歌贼难听.mp4", sf1.NameAnalyze().ToString())
+	analyze := sf1.NameAnalyze().ToString()
 	t.Log(analyze)
 
 	sf2, e := FFProbeStreamFormat("d:\\video\\[BT天堂btbttt.com]我的女友.My.Girlfriend.2018.HD720P.X264.AAC.Korean.中文字幕.mp4")

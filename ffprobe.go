@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -252,9 +253,11 @@ func NameAnalyze(filename string) *FileInfo {
 	name = compile.ReplaceAllString(name, "")
 	n := strings.Split(name, ".")
 	size := len(n)
-	if size < MaxSizeIdx-1 {
+
+	if size < MaxSizeIdx-1 || isVideo(n[size-ExtIdx]) {
 		return nil
 	}
+
 	cname := n[CNameIdx]
 	ename := ""
 	if size-ENameIdx > CNameIdx {
@@ -273,4 +276,16 @@ func NameAnalyze(filename string) *FileInfo {
 		EName:     ename,
 		Prefix:    prefix,
 	}
+}
+
+func isVideo(filename string) bool {
+	vlist := []string{
+		".mkv", ".mp4", ".mpg", ".mpeg", ".avi", ".rm", ".rmvb", ".mov", ".wmv", ".asf", ".dat", ".asx", ".wvx", ".mpe", ".mpa",
+	}
+	for _, v := range vlist {
+		if path.Ext(filename) == v {
+			return true
+		}
+	}
+	return false
 }
