@@ -156,6 +156,11 @@ func (f *StreamFormat) Video() *Stream {
 	return nil
 }
 
+// IsVideo ...
+func (f *StreamFormat) IsVideo() bool {
+	return isVideo(f.Format.Filename)
+}
+
 // Audio ...
 func (f *StreamFormat) Audio() *Stream {
 	for _, s := range f.Streams {
@@ -254,7 +259,7 @@ func NameAnalyze(filename string) *FileInfo {
 	n := strings.Split(name, ".")
 	size := len(n)
 
-	if size < MaxSizeIdx-1 || isVideo(n[size-ExtIdx]) {
+	if isVideo(name) || size < MaxSizeIdx-1 {
 		return nil
 	}
 
@@ -282,8 +287,9 @@ func isVideo(filename string) bool {
 	vlist := []string{
 		".mkv", ".mp4", ".mpg", ".mpeg", ".avi", ".rm", ".rmvb", ".mov", ".wmv", ".asf", ".dat", ".asx", ".wvx", ".mpe", ".mpa",
 	}
+	ext := path.Ext(filename)
 	for _, v := range vlist {
-		if path.Ext(filename) == v {
+		if ext == v {
 			return true
 		}
 	}
