@@ -9,6 +9,20 @@ import (
 	"strings"
 )
 
+// ExtIdx ...
+const (
+	CNameIdx = iota
+	ExtIdx
+	CaptionIdx
+	LanguageIdx
+	AudioIdx
+	VideoIdx
+	SharpnessIdx
+	DataIdx
+	ENameIdx
+	MaxSizeIdx
+)
+
 // StreamFormat ...
 type StreamFormat struct {
 	Streams []Stream `json:"streams"`
@@ -226,20 +240,6 @@ func (info *FileInfo) ToString() string {
 	infos = append(infos, info.Caption)
 	return strings.Join(infos, ".") + info.Ext
 }
-
-// ExtIdx ...
-const (
-	CNameIdx = iota
-	ExtIdx
-	CaptionIdx
-	LanguageIdx
-	AudioIdx
-	VideoIdx
-	SharpnessIdx
-	DataIdx
-	ENameIdx
-	MaxSizeIdx
-)
 
 // NameAnalyze ...
 func (f *Format) NameAnalyze() *FileInfo {
