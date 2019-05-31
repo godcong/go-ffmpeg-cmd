@@ -224,8 +224,7 @@ func (info *FileInfo) ToString() string {
 	infos = append(infos, info.Audio)
 	infos = append(infos, info.Language)
 	infos = append(infos, info.Caption)
-	infos = append(infos, info.Ext)
-	return strings.Join(infos, ".")
+	return strings.Join(infos, ".") + info.Ext
 }
 
 // ExtIdx ...
