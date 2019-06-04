@@ -187,23 +187,33 @@ func (f *StreamFormat) Audio() *Stream {
 
 // NameAnalyze 解析
 func (f *StreamFormat) NameAnalyze() *FileInfo {
-	info := f.Format.NameAnalyze()
 	_, name := filepath.Split(f.Format.Filename)
 	ext := filepath.Ext(f.Format.Filename)
 	name = strings.Replace(name, ext, "", -1)
-	if info == nil {
-		info = &FileInfo{
-			Ext:       ext,
-			Caption:   "None",
-			Language:  "Japanese",
-			Audio:     f.Audio().CodecName,
-			Video:     f.Video().CodecName,
-			Sharpness: f.Resolution(),
-			Date:      "2019",
-			CName:     name,
-			EName:     "",
-			Prefix:    "",
+	info := &FileInfo{
+		Ext:       ext,
+		Caption:   "None",
+		Language:  "Japanese",
+		Audio:     f.Audio().CodecName,
+		Video:     f.Video().CodecName,
+		Sharpness: f.Resolution(),
+		Date:      "2019",
+		CName:     name,
+		EName:     "",
+		Prefix:    "",
+	}
+
+	na := f.Format.NameAnalyze()
+
+	if na != nil {
+		_, err := strconv.ParseInt(info.Date, 10, 32)
+		if err != nil {
+			return info
 		}
+		info.Date = na.Date
+		info.CName = na.CName
+		info.Language = na.Language
+
 	}
 	return info
 }
