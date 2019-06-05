@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"golang.org/x/xerrors"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ const sliceM3u8FFmpegTemplate = "-y -i %s -strict -2  -c:v %s -c:a %s -bsf:v h26
 
 // SplitArgs ...
 type SplitArgs struct {
+	Auto            bool
 	Output          string
 	Video           string
 	Audio           string
@@ -91,6 +93,13 @@ func OutputOption(s string) SplitOptions {
 	}
 }
 
+// AutoOption ...
+func AutoOption(s bool) SplitOptions {
+	return func(args *SplitArgs) {
+		args.Auto = s
+	}
+}
+
 // VideoOption ...
 func VideoOption(s string) SplitOptions {
 	return func(args *SplitArgs) {
@@ -112,6 +121,7 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	}
 	sa := SplitArgs{
 		Output:          "",
+		Auto:            true,
 		Video:           "libx264",
 		Audio:           "aac",
 		M3U8:            "media.m3u8",
@@ -140,7 +150,10 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	if e != nil {
 		return e
 	}
-	//_ = os.MkdirAll(out, os.ModePerm)
+
+	if sa.Auto {
+		_ = os.MkdirAll(out, os.ModePerm)
+	}
 
 	sfn := filepath.Join(out, sa.SegmentFileName)
 	m3u8 := filepath.Join(out, sa.M3U8)
