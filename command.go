@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"bufio"
-	"context"
 	"github.com/godcong/go-trait"
-	"golang.org/x/xerrors"
 	"io"
 	"os"
 	"os/exec"
@@ -98,19 +96,15 @@ func (c *Command) Env() []string {
 }
 
 // RunContext ...
-func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan<- bool) (e error) {
-	cmd := exec.CommandContext(ctx, c.CMD(), c.Args...)
+func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
+	cmd := exec.CommandContext(ctx.Context(), c.CMD(), c.Args...)
 
 	//显示运行的命令
 	log.With("run", "RunContext").Info(cmd.Args)
 	defer func() {
-		log.Debug("close")
-		if close != nil {
-			close <- true
-		}
-
+		ctx.Done()
 		if e != nil {
-			panic(e)
+			log.Panic(e)
 		}
 	}()
 	stdout, e := cmd.StdoutPipe()
@@ -123,7 +117,6 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 		return e
 	}
 
-	log.Debug("start")
 	e = cmd.Start()
 	if e != nil {
 		return e
@@ -133,9 +126,8 @@ func (c *Command) RunContext(ctx context.Context, info chan<- string, close chan
 	//实时循环读取输出流中的一行内容
 	for {
 		select {
-		case <-ctx.Done():
-			e = xerrors.New("exit with done")
-			return
+		case <-ctx.Context().Done():
+			return ctx.Context().Err()
 		default:
 			lines, _, e := reader.ReadLine()
 			if e != nil || io.EOF == e {
