@@ -190,12 +190,22 @@ func (f *StreamFormat) NameAnalyze() *FileInfo {
 	_, name := filepath.Split(f.Format.Filename)
 	ext := filepath.Ext(f.Format.Filename)
 	name = strings.Replace(name, ext, "", -1)
+	audio := f.Audio()
+	audioName := ""
+	if audio != nil {
+		audioName = audio.CodecName
+	}
+	video := f.Video()
+	videoName := ""
+	if video != nil {
+		videoName = video.CodecName
+	}
 	info := &FileInfo{
 		Ext:       ext,
 		Caption:   "None",
 		Language:  "Japanese",
-		Audio:     f.Audio().CodecName,
-		Video:     f.Video().CodecName,
+		Audio:     audioName,
+		Video:     videoName,
 		Sharpness: f.Resolution(),
 		Date:      "2019",
 		CName:     name,
