@@ -150,7 +150,7 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	if e != nil {
 		return e
 	}
-
+	log.With("output", out).Info("output dir")
 	if sa.Auto {
 		_ = os.MkdirAll(out, os.ModePerm)
 	}
@@ -183,7 +183,10 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error)
 	if e != nil {
 		return e
 	}
-	//_ = os.MkdirAll(out, os.ModePerm)
+	log.With("output", out).Info("output dir")
+	if sa.Auto {
+		_ = os.MkdirAll(out, os.ModePerm)
+	}
 
 	sfn := filepath.Join(out, sa.SegmentFileName)
 	m3u8 := filepath.Join(out, sa.M3U8)

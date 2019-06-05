@@ -143,11 +143,14 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		}
 	}
 END:
+	if e != nil {
+		bytes, _ := ioutil.ReadAll(stderr)
+		info <- string(bytes)
+	}
 	e = cmd.Wait()
 	if e != nil {
 		return e
 	}
-	bytes, e := ioutil.ReadAll(stderr)
-	info <- string(bytes)
+
 	return nil
 }
