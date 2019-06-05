@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/xerrors"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 const sliceM3u8FFmpegTemplate = "-y -i %s -strict -2  -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d  -hls_segment_filename %s %s"
@@ -26,6 +28,7 @@ type SplitArgs struct {
 
 // FFmpegContext ...
 type ffmpegContext struct {
+	once   sync.Once
 	mu     sync.RWMutex
 	wg     *sync.WaitGroup
 	ctx    context.Context
@@ -44,7 +47,22 @@ func (c *ffmpegContext) Add(i int) {
 }
 
 // Wait ...
+func (c *ffmpegContext) Wait() {
+	select {
+	case <-c.Waiting():
+		return
+	}
+}
+
+// Waiting ...
 func (c *ffmpegContext) Waiting() <-chan bool {
+	c.once.Do(func() {
+		go func() {
+			c.wg.Wait()
+			c.done <- true
+		}()
+	})
+
 	c.mu.Lock()
 	if c.done == nil {
 		c.done = make(chan bool)
@@ -71,6 +89,7 @@ type Context interface {
 	Cancel()
 	Add(int)
 	Waiting() <-chan bool
+	Wait()
 	Done()
 	Context() context.Context
 }
@@ -204,6 +223,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error)
 	m3u8 := filepath.Join(out, sa.M3U8)
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
+	time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 	return FFMpegRun(ctx, tpl)
 }
 
@@ -231,9 +251,6 @@ func FFMpegRun(ctx Context, args string) (e error) {
 					log.Info("exit with cancel")
 				}
 			}
-			return
-		case <-ctx.Waiting():
-			log.Info("all success")
 			return
 		default:
 			//log.Println("waiting:...")
