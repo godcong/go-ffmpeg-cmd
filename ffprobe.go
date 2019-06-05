@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ExtIdx ...
@@ -207,7 +208,7 @@ func (f *StreamFormat) NameAnalyze() *FileInfo {
 		Audio:     audioName,
 		Video:     videoName,
 		Sharpness: f.Resolution(),
-		Date:      "2019",
+		Date:      strconv.FormatInt(int64(time.Now().Year()), 10),
 		CName:     name,
 		EName:     "",
 		Prefix:    "",
@@ -222,8 +223,8 @@ func (f *StreamFormat) NameAnalyze() *FileInfo {
 		}
 		info.Date = na.Date
 		info.CName = na.CName
+		info.Caption = na.Caption
 		info.Language = na.Language
-
 	}
 	return info
 }
