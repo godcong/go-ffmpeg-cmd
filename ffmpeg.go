@@ -4,8 +4,8 @@ import (
 	"context"
 )
 
-// FFMpegSpliteMedia ...
-func FFMpegSpliteMedia(ctx context.Context, args string) {
+// FFMpegRun ...
+func FFMpegRun(ctx context.Context, args string) {
 	ffmpeg := NewFFMpeg()
 	ffmpeg.SetArgs(args)
 	info := make(chan string, 1024)
