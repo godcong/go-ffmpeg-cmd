@@ -5,6 +5,7 @@ import (
 	"github.com/godcong/go-trait"
 	"io"
 	"io/ioutil"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -105,7 +106,7 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 	defer func() {
 		ctx.Done()
 		if e != nil {
-			log.Panic(e)
+			log.Error(e)
 		}
 	}()
 	stdout, e := cmd.StdoutPipe()
@@ -123,7 +124,7 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		return e
 	}
 
-	reader := bufio.NewReader(io.MultiReader(stdout))
+	reader := bufio.NewReader(stdout)
 	//实时循环读取输出流中的一行内容
 	for {
 		select {

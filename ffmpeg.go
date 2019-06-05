@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"golang.org/x/xerrors"
 	"os"
 	"path/filepath"
@@ -25,9 +26,11 @@ type SplitArgs struct {
 
 // FFmpegContext ...
 type ffmpegContext struct {
+	mu     sync.RWMutex
 	wg     *sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
+	done   chan bool
 }
 
 // Context ...
@@ -41,8 +44,14 @@ func (c *ffmpegContext) Add(i int) {
 }
 
 // Wait ...
-func (c *ffmpegContext) Wait() {
-	c.wg.Wait()
+func (c *ffmpegContext) Waiting() <-chan bool {
+	c.mu.Lock()
+	if c.done == nil {
+		c.done = make(chan bool)
+	}
+	d := c.done
+	c.mu.Unlock()
+	return d
 }
 
 // Done ...
@@ -61,7 +70,7 @@ func (c *ffmpegContext) Cancel() {
 type Context interface {
 	Cancel()
 	Add(int)
-	Wait()
+	Waiting() <-chan bool
 	Done()
 	Context() context.Context
 }
@@ -152,6 +161,7 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	}
 	log.With("output", out).Info("output dir")
 	if sa.Auto {
+		out = filepath.Join(out, uuid.New().String())
 		_ = os.MkdirAll(out, os.ModePerm)
 	}
 
@@ -169,6 +179,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error)
 	}
 	sa := SplitArgs{
 		Output:          "",
+		Auto:            true,
 		Video:           "libx264",
 		Audio:           "aac",
 		M3U8:            "media.m3u8",
@@ -185,6 +196,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error)
 	}
 	log.With("output", out).Info("output dir")
 	if sa.Auto {
+		out = filepath.Join(out, uuid.New().String())
 		_ = os.MkdirAll(out, os.ModePerm)
 	}
 
@@ -219,6 +231,9 @@ func FFMpegRun(ctx Context, args string) (e error) {
 					log.Info("exit with cancel")
 				}
 			}
+			return
+		case <-ctx.Waiting():
+			log.Info("all success")
 			return
 		default:
 			//log.Println("waiting:...")
