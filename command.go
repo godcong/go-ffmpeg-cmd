@@ -46,6 +46,11 @@ func (c *Command) SetArgs(s string) {
 	c.Args = strings.Split(s, " ")
 }
 
+// AddArgs ...
+func (c *Command) AddArgs(s string) {
+	c.Args = append(c.Args, s)
+}
+
 // SetPath ...
 func (c *Command) SetPath(s string) {
 	c.Path = s

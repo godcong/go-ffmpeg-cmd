@@ -133,7 +133,8 @@ func getResolutionIndex(n int64, sta, end int) int {
 // FFProbeStreamFormat ...
 func FFProbeStreamFormat(filename string) (*StreamFormat, error) {
 	probe := NewFFProbe()
-	probe.SetArgs("-v quiet -print_format json -show_format -show_streams " + filename)
+	probe.SetArgs("-v quiet -print_format json -show_format -show_streams")
+	probe.AddArgs(filename)
 	s, e := probe.Run()
 	if e != nil {
 		return nil, e
@@ -222,6 +223,7 @@ func (f *StreamFormat) NameAnalyze() *FileInfo {
 			return info
 		}
 		info.Date = na.Date
+		info.EName = na.EName
 		info.CName = na.CName
 		info.Caption = na.Caption
 		info.Language = na.Language
