@@ -169,6 +169,10 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	if strings.Index(file, " ") != -1 {
 		return nil, xerrors.New("file name cannot have spaces")
 	}
+	if ctx == nil {
+		ctx = FFmpegContext()
+	}
+	ctx.Add(1)
 	sa = &SplitArgs{
 		Output:          "",
 		Auto:            true,
