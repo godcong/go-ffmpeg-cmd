@@ -122,29 +122,29 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		return e
 	}
 
-	reader := bufio.NewReader(io.MultiReader(stdout, stderr))
+	reader := bufio.NewReader(io.MultiReader(stderr, stdout))
 	//实时循环读取输出流中的一行内容
 	for {
-		//select {
-		//case <-ctx.Context().Done():
-		//	return ctx.Context().Err()
-		//default:
-		log.Info("run")
-		lines, e := reader.ReadString('\n')
-		log.Info(string(lines), e)
-		if e != nil || io.EOF == e {
-			//goto END
-			break
+		select {
+		case <-ctx.Context().Done():
+			return ctx.Context().Err()
+		default:
+			//log.Info("run")
+			lines, _, e := reader.ReadLine()
+			log.Info(string(lines), e)
+			if e != nil || io.EOF == e {
+				goto END
+				//break
+			}
+			if strings.TrimSpace(string(lines)) != "" {
+				if info != nil {
+					info <- string(lines)
+				}
+			}
+			//time.Sleep(300 * time.Microsecond)
 		}
-		//if strings.TrimSpace(string(lines)) != "" {
-		//	if info != nil {
-		//		info <- string(lines)
-		//	}
-		//}
-		//time.Sleep(300 * time.Microsecond)
-		//}
 	}
-	//END:
+END:
 	//if e != nil {
 	//	bytes, _ := ioutil.ReadAll(stderr)
 	//	info <- string(bytes)
