@@ -17,6 +17,7 @@ const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264
 
 // SplitArgs ...
 type SplitArgs struct {
+	StreamFormat    *StreamFormat
 	Auto            bool
 	Output          string
 	Video           string
@@ -143,6 +144,13 @@ func AudioOption(s string) SplitOptions {
 	}
 }
 
+// StreamFormatOption ...
+func StreamFormatOption(s *StreamFormat) SplitOptions {
+	return func(args *SplitArgs) {
+		args.StreamFormat = s
+	}
+}
+
 // ProbeInfoOption ...
 func ProbeInfoOption(f func(string) (*StreamFormat, error)) SplitOptions {
 	return func(args *SplitArgs) {
@@ -175,13 +183,15 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	}
 
 	if sa.probe != nil {
-		format, e := sa.probe(file)
+		sa.StreamFormat, e = sa.probe(file)
 		if e != nil {
 			return nil, e
 		}
-		video := format.Video()
-		audio := format.Audio()
-		if !format.IsVideo() || audio == nil || video == nil {
+	}
+	if sa.StreamFormat != nil {
+		video := sa.StreamFormat.Video()
+		audio := sa.StreamFormat.Audio()
+		if !sa.StreamFormat.IsVideo() || audio == nil || video == nil {
 			return nil, xerrors.New("open file failed with ffprobe")
 		}
 		if video.CodecName == "h264" {
