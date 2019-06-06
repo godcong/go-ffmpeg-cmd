@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const sliceM3u8FFmpegTemplate = "-y -i %s -strict -2  -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d  -hls_segment_filename %s %s"
+const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 
 // SplitArgs ...
 type SplitArgs struct {
@@ -168,7 +168,7 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	if !format.IsVideo() || audio == nil || video == nil {
 		return xerrors.New("open file failed with ffprobe")
 	}
-	if video.CodecName == sa.Video {
+	if video.CodecName == "h264" {
 		sa.Video = "copy"
 	}
 	if audio.CodecName == sa.Audio {
