@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"bufio"
 	"github.com/godcong/go-trait"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,6 +95,10 @@ func (c *Command) Env() []string {
 
 // RunContext ...
 func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
+	_, e = exec.LookPath(c.CMD())
+	if e != nil {
+		return e
+	}
 	cmd := exec.CommandContext(ctx.Context(), c.CMD(), c.Args...)
 
 	//显示运行的命令
@@ -107,53 +109,63 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 			log.Error(e)
 		}
 	}()
-	stdout, e := cmd.StdoutPipe()
-	if e != nil {
-		return e
-	}
-
-	stderr, e := cmd.StderrPipe()
-	if e != nil {
-		return e
-	}
+	//stdout, e := cmd.StdoutPipe()
+	//if e != nil {
+	//	return e
+	//}
+	//
+	//stderr, e := cmd.StderrPipe()
+	//if e != nil {
+	//	return e
+	//}
+	//pr, pw, err := os.Pipe()
+	//if err != nil {
+	//	return err
+	//}
+	//cmd.Stderr = pw
+	//c.closeAfterStart = append(c.closeAfterStart, pw)
+	//c.closeAfterWait = append(c.closeAfterWait, pr)
+	//
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	e = cmd.Start()
 	if e != nil {
 		return e
 	}
-
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
 	//err must before out
-	reader := bufio.NewReader(io.MultiReader(stderr, stdout))
+	//reader := bufio.NewReader(io.MultiReader(cmd.Stderr, cmd.Stdout))
 	//实时循环读取输出流中的一行内容
 	for {
 		select {
+		case <-done:
+			return
 		case <-ctx.Context().Done():
 			return ctx.Context().Err()
 		default:
-			//log.Info("run")
-			lines, _, e := reader.ReadLine()
-			//log.Info(string(lines), e)
-			if e != nil || io.EOF == e {
-				goto END
-				//break
-			}
-			if strings.TrimSpace(string(lines)) != "" {
-				if info != nil {
-					info <- string(lines)
-				}
-			}
-			//time.Sleep(300 * time.Microsecond)
+			//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+			//	goto END
+			//}
+			//lines, _, e := reader.ReadLine()
+			//if e != nil || io.EOF == e {
+			//	goto END
+			//}
+			//if strings.TrimSpace(string(lines)) != "" {
+			//	if info != nil {
+			//		info <- string(lines)
+			//	}
+			//}
 		}
 	}
-END:
+	//END:
 	//if e != nil {
 	//	bytes, _ := ioutil.ReadAll(stderr)
 	//	info <- string(bytes)
 	//}
-	e = cmd.Wait()
-	if e != nil {
-		return e
-	}
 
 	return nil
 }
