@@ -122,6 +122,7 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		return e
 	}
 
+	//err must before out
 	reader := bufio.NewReader(io.MultiReader(stderr, stdout))
 	//实时循环读取输出流中的一行内容
 	for {
