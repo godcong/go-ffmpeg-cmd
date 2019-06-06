@@ -24,6 +24,7 @@ type SplitArgs struct {
 	M3U8            string
 	SegmentFileName string
 	HLSTime         int
+	probe           func(string) (*StreamFormat, error)
 }
 
 // FFmpegContext ...
@@ -142,61 +143,25 @@ func AudioOption(s string) SplitOptions {
 	}
 }
 
+// ProbeInfoOption ...
+func ProbeInfoOption(f func(string) (*StreamFormat, error)) SplitOptions {
+	return func(args *SplitArgs) {
+		args.probe = f
+	}
+}
+
 // FFMpegSplitToM3U8WithProbe ...
-func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) (e error) {
-	if strings.Index(file, " ") != -1 {
-		return xerrors.New("file name cannot have spaces")
-	}
-	sa := SplitArgs{
-		Output:          "",
-		Auto:            true,
-		Video:           "libx264",
-		Audio:           "aac",
-		M3U8:            "media.m3u8",
-		SegmentFileName: "media-%05d.ts",
-		HLSTime:         10,
-	}
-	for _, o := range args {
-		o(&sa)
-	}
-	format, e := FFProbeStreamFormat(file)
-	if e != nil {
-		return e
-	}
-	video := format.Video()
-	audio := format.Audio()
-	if !format.IsVideo() || audio == nil || video == nil {
-		return xerrors.New("open file failed with ffprobe")
-	}
-	if video.CodecName == "h264" {
-		sa.Video = "copy"
-	}
-	if audio.CodecName == sa.Audio {
-		sa.Audio = "copy"
-	}
-	out, e := filepath.Abs(sa.Output)
-	if e != nil {
-		return e
-	}
-	log.With("output", out).Info("output dir")
-	if sa.Auto {
-		out = filepath.Join(out, uuid.New().String())
-		_ = os.MkdirAll(out, os.ModePerm)
-	}
-
-	sfn := filepath.Join(out, sa.SegmentFileName)
-	m3u8 := filepath.Join(out, sa.M3U8)
-
-	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
-	return FFMpegRun(ctx, tpl)
+func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) (sa *SplitArgs, e error) {
+	args = append(args, ProbeInfoOption(FFProbeStreamFormat))
+	return FFMpegSplitToM3U8(ctx, file, args...)
 }
 
 // FFMpegSplitToM3U8 ...
-func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error) {
+func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *SplitArgs, e error) {
 	if strings.Index(file, " ") != -1 {
-		return xerrors.New("file name cannot have spaces")
+		return nil, xerrors.New("file name cannot have spaces")
 	}
-	sa := SplitArgs{
+	sa = &SplitArgs{
 		Output:          "",
 		Auto:            true,
 		Video:           "libx264",
@@ -206,25 +171,43 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (e error)
 		HLSTime:         10,
 	}
 	for _, o := range args {
-		o(&sa)
+		o(sa)
 	}
 
-	out, e := filepath.Abs(sa.Output)
+	if sa.probe != nil {
+		format, e := sa.probe(file)
+		if e != nil {
+			return nil, e
+		}
+		video := format.Video()
+		audio := format.Audio()
+		if !format.IsVideo() || audio == nil || video == nil {
+			return nil, xerrors.New("open file failed with ffprobe")
+		}
+		if video.CodecName == "h264" {
+			sa.Video = "copy"
+		}
+		if audio.CodecName == sa.Audio {
+			sa.Audio = "copy"
+		}
+	}
+
+	sa.Output, e = filepath.Abs(sa.Output)
 	if e != nil {
-		return e
+		return nil, e
 	}
-	log.With("output", out).Info("output dir")
+	log.With("output", sa.Output).Info("output dir")
 	if sa.Auto {
-		out = filepath.Join(out, uuid.New().String())
-		_ = os.MkdirAll(out, os.ModePerm)
+		sa.Output = filepath.Join(sa.Output, uuid.New().String())
+		_ = os.MkdirAll(sa.Output, os.ModePerm)
 	}
 
-	sfn := filepath.Join(out, sa.SegmentFileName)
-	m3u8 := filepath.Join(out, sa.M3U8)
+	sfn := filepath.Join(sa.Output, sa.SegmentFileName)
+	m3u8 := filepath.Join(sa.Output, sa.M3U8)
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
 	time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
-	return FFMpegRun(ctx, tpl)
+	return nil, FFMpegRun(ctx, tpl)
 }
 
 // FFMpegRun ...
