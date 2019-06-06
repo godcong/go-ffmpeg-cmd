@@ -131,7 +131,7 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		default:
 			//log.Info("run")
 			lines, _, e := reader.ReadLine()
-			log.Info(string(lines), e)
+			//log.Info(string(lines), e)
 			if e != nil || io.EOF == e {
 				goto END
 				//break
