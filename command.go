@@ -138,28 +138,30 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 	//实时循环读取输出流中的一行内容
 	//for {
 	log.Info("running")
-	select {
-	//case err := <-done:
-	//	log.Error(err)
-	//	return
-	case <-ctx.Context().Done():
-		log.Error(ctx.Context().Err())
-		return ctx.Context().Err()
-	default:
-		//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		//	goto END
-		//}
-		lines, _, e := reader.ReadLine()
-		if e != nil || io.EOF == e {
-			goto END
-		}
-		if strings.TrimSpace(string(lines)) != "" {
-			if info != nil {
-				info <- string(lines)
+	for {
+
+		select {
+		//case err := <-done:
+		//	log.Error(err)
+		//	return
+		case <-ctx.Context().Done():
+			log.Error(ctx.Context().Err())
+			return ctx.Context().Err()
+		default:
+			//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+			//	goto END
+			//}
+			lines, _, e := reader.ReadLine()
+			if e != nil || io.EOF == e {
+				goto END
+			}
+			if strings.TrimSpace(string(lines)) != "" {
+				if info != nil {
+					info <- string(lines)
+				}
 			}
 		}
 	}
-
 	//}
 END:
 	e = cmd.Wait()
