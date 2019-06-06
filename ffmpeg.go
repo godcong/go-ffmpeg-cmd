@@ -13,12 +13,15 @@ import (
 	"time"
 )
 
-const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+//const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 
 // SplitArgs ...
 type SplitArgs struct {
 	StreamFormat    *StreamFormat
 	Auto            bool
+	Start           string
+	End             string
 	Output          string
 	Video           string
 	Audio           string
@@ -172,7 +175,6 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	if ctx == nil {
 		ctx = FFmpegContext()
 	}
-	ctx.Add(1)
 	sa = &SplitArgs{
 		Output:          "",
 		Auto:            true,
@@ -204,6 +206,14 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		if audio.CodecName == sa.Audio {
 			sa.Audio = "copy"
 		}
+
+		if sa.Start == "" {
+			sa.Start = video.StartTime
+		}
+		if sa.End == "" {
+			sa.End = video.Duration
+		}
+
 	}
 
 	sa.Output, e = filepath.Abs(sa.Output)
@@ -230,6 +240,7 @@ func FFMpegRun(ctx Context, args string) (e error) {
 	ffmpeg.SetArgs(args)
 	info := make(chan string, 1024)
 	go func() {
+		ctx.Add(1)
 		e = ffmpeg.RunContext(ctx, info)
 		if e != nil {
 			return

@@ -7,13 +7,13 @@ import (
 
 // TestFormat_NameAnalyze ...
 func TestFormat_NameAnalyze(t *testing.T) {
-	sf1, e := FFProbeStreamFormat("d:\\video\\[AKROSS Con 2016]MrNosec - Numinous alt.mp4")
+	sf1, e := FFProbeStreamFormat("d:\\video\\极乐女忍者.LADY.NINJA.2018.HD1080P.X264.AAC.Japanese.CHT.mp4")
 
 	if e != nil {
 		log.Error(e)
 		return
 	}
-	t.Log(sf1.Format)
+	t.Logf("%+v", sf1.Format)
 	_ = os.Rename("d:\\video\\周杰伦唱歌贼难听.mp4", sf1.NameAnalyze().ToString())
 	analyze := sf1.NameAnalyze().ToString()
 	t.Log(analyze)

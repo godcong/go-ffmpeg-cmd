@@ -129,10 +129,10 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	e = cmd.Start()
-	if e != nil {
-		return e
-	}
+	//e = cmd.Start()
+	//if e != nil {
+	//	return e
+	//}
 	//done := make(chan error, 1)
 	//go func() {
 	//
@@ -162,9 +162,11 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 	//	}
 	//}
 	//END:
-	e = cmd.Wait()
-	if e != nil {
-		return e
-	}
-	return nil
+	//e = cmd.Wait()
+	//if e != nil {
+	//	return e
+	//}
+	//return nil
+	return cmd.Run()
+
 }
