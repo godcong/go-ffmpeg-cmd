@@ -239,15 +239,18 @@ func FFMpegRun(ctx Context, args string) (e error) {
 	ffmpeg := NewFFMpeg()
 	ffmpeg.SetArgs(args)
 	info := make(chan string, 1024)
+	done := make(chan error, 1)
 	go func() {
 		ctx.Add(1)
-		e = ffmpeg.RunContext(ctx, info)
-		if e != nil {
-			return
-		}
+		done <- ffmpeg.RunContext(ctx, info)
 	}()
 	for {
 		select {
+		case e = <-done:
+			if e != nil {
+				log.Error(e)
+			}
+			return
 		case v := <-info:
 			if v != "" {
 				log.With("status", "process").Info(v)

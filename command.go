@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"github.com/godcong/go-trait"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -100,73 +102,74 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 		return e
 	}
 	cmd := exec.CommandContext(ctx.Context(), c.CMD(), c.Args...)
-
+	cmd.Env = os.Environ()
 	//显示运行的命令
 	log.With("run", "RunContext").Info(cmd.Args)
 	defer func() {
+		log.Info("done")
 		ctx.Done()
 		if e != nil {
 			log.Error(e)
 		}
 	}()
-	//stdout, e := cmd.StdoutPipe()
-	//if e != nil {
-	//	return e
-	//}
-	//
-	//stderr, e := cmd.StderrPipe()
-	//if e != nil {
-	//	return e
-	//}
-	//pr, pw, err := os.Pipe()
-	//if err != nil {
-	//	return err
-	//}
-	//cmd.Stderr = pw
-	//c.closeAfterStart = append(c.closeAfterStart, pw)
-	//c.closeAfterWait = append(c.closeAfterWait, pr)
-	//
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	//e = cmd.Start()
-	//if e != nil {
-	//	return e
-	//}
-	//done := make(chan error, 1)
+	stdout, e := cmd.StdoutPipe()
+	if e != nil {
+		return e
+	}
+
+	stderr, e := cmd.StderrPipe()
+	if e != nil {
+		return e
+	}
+
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	//cmd.Stdin = os.Stdin
+	e = cmd.Start()
+	if e != nil {
+		return e
+	}
+	//done := make(chan error)
 	//go func() {
-	//
+	//	done <- cmd.Wait()
 	//}()
 	//err must before out
-	//reader := bufio.NewReader(io.MultiReader(cmd.Stderr, cmd.Stdout))
+	reader := bufio.NewReader(io.MultiReader(stderr, stdout))
 	//实时循环读取输出流中的一行内容
 	//for {
-	//	select {
-	//	case <-done:
-	//		return
-	//	case <-ctx.Context().Done():
-	//		return ctx.Context().Err()
-	//		//default:
-	//		//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-	//		//	goto END
-	//		//}
-	//		//lines, _, e := reader.ReadLine()
-	//		//if e != nil || io.EOF == e {
-	//		//	goto END
-	//		//}
-	//		//if strings.TrimSpace(string(lines)) != "" {
-	//		//	if info != nil {
-	//		//		info <- string(lines)
-	//		//	}
-	//		//}
-	//	}
+	log.Info("running")
+	select {
+	//case err := <-done:
+	//	log.Error(err)
+	//	return
+	case <-ctx.Context().Done():
+		log.Error(ctx.Context().Err())
+		return ctx.Context().Err()
+	default:
+		//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+		//	goto END
+		//}
+		lines, _, e := reader.ReadLine()
+		if e != nil || io.EOF == e {
+			goto END
+		}
+		if strings.TrimSpace(string(lines)) != "" {
+			if info != nil {
+				info <- string(lines)
+			}
+		}
+	}
+
 	//}
-	//END:
-	//e = cmd.Wait()
+END:
+	e = cmd.Wait()
+	if e != nil {
+		return e
+	}
+	//return nil
+	//e = cmd.Run()
 	//if e != nil {
 	//	return e
 	//}
-	//return nil
-	return cmd.Run()
-
+	return nil
 }
