@@ -128,44 +128,43 @@ func (c *Command) RunContext(ctx Context, info chan<- string) (e error) {
 	//
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
+	cmd.Stdin = os.Stdin
 	e = cmd.Start()
 	if e != nil {
 		return e
 	}
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Wait()
-	}()
+	//done := make(chan error, 1)
+	//go func() {
+	//
+	//}()
 	//err must before out
 	//reader := bufio.NewReader(io.MultiReader(cmd.Stderr, cmd.Stdout))
 	//实时循环读取输出流中的一行内容
-	for {
-		select {
-		case <-done:
-			return
-		case <-ctx.Context().Done():
-			return ctx.Context().Err()
-		default:
-			//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-			//	goto END
-			//}
-			//lines, _, e := reader.ReadLine()
-			//if e != nil || io.EOF == e {
-			//	goto END
-			//}
-			//if strings.TrimSpace(string(lines)) != "" {
-			//	if info != nil {
-			//		info <- string(lines)
-			//	}
-			//}
-		}
-	}
-	//END:
-	//if e != nil {
-	//	bytes, _ := ioutil.ReadAll(stderr)
-	//	info <- string(bytes)
+	//for {
+	//	select {
+	//	case <-done:
+	//		return
+	//	case <-ctx.Context().Done():
+	//		return ctx.Context().Err()
+	//		//default:
+	//		//if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+	//		//	goto END
+	//		//}
+	//		//lines, _, e := reader.ReadLine()
+	//		//if e != nil || io.EOF == e {
+	//		//	goto END
+	//		//}
+	//		//if strings.TrimSpace(string(lines)) != "" {
+	//		//	if info != nil {
+	//		//		info <- string(lines)
+	//		//	}
+	//		//}
+	//	}
 	//}
-
+	//END:
+	e = cmd.Wait()
+	if e != nil {
+		return e
+	}
 	return nil
 }
