@@ -203,17 +203,9 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		if video.CodecName == "h264" {
 			sa.Video = "copy"
 		}
-		if audio.CodecName == sa.Audio {
+		if audio.CodecName == "aac" {
 			sa.Audio = "copy"
 		}
-
-		if sa.Start == "" {
-			sa.Start = video.StartTime
-		}
-		if sa.End == "" {
-			sa.End = video.Duration
-		}
-
 	}
 
 	sa.Output, e = filepath.Abs(sa.Output)
