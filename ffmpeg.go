@@ -223,7 +223,11 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
 	time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
-	return nil, FFMpegRun(ctx, tpl)
+
+	if err := FFMpegRun(ctx, tpl); err != nil {
+		return nil, err
+	}
+	return sa, nil
 }
 
 // FFMpegRun ...
