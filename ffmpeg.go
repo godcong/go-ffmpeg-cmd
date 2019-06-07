@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/xerrors"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
@@ -222,7 +220,6 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	m3u8 := filepath.Join(sa.Output, sa.M3U8)
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
-	time.Sleep(time.Duration(rand.Int31n(30)) * time.Second)
 
 	if err := FFMpegRun(ctx, tpl); err != nil {
 		return nil, err
