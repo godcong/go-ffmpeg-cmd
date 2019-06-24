@@ -307,7 +307,8 @@ func NameAnalyze(filename string) *FileInfo {
 
 func isVideo(filename string) bool {
 	vlist := []string{
-		".mkv", ".mp4", ".mpg", ".mpeg", ".avi", ".rm", ".rmvb", ".mov", ".wmv", ".asf", ".dat", ".asx", ".wvx", ".mpe", ".mpa",
+		".swf", "flv", ".3gp", "ogm", ".vob", ".m4v", ".mkv", ".mp4", ".mpg", ".mpeg",
+		".avi", ".rm", ".rmvb", ".mov", ".wmv", ".asf", ".dat", ".asx", ".wvx", ".mpe", ".mpa",
 	}
 	ext := path.Ext(filename)
 	for _, v := range vlist {
