@@ -18,6 +18,7 @@ const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264
 type SplitArgs struct {
 	StreamFormat    *StreamFormat
 	Auto            bool
+	Scale           string
 	Start           string
 	End             string
 	Output          string
@@ -114,6 +115,17 @@ type SplitOptions func(args *SplitArgs)
 func HLSTimeOption(i int) SplitOptions {
 	return func(args *SplitArgs) {
 		args.HLSTime = i
+	}
+}
+
+// ScaleOption ...
+func ScaleOption(s string, v ...string) SplitOptions {
+	return func(args *SplitArgs) {
+		args.Video = "libx264"
+		for _, value := range v {
+			args.Video = value
+		}
+		args.Scale = s
 	}
 }
 
