@@ -211,15 +211,17 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		if !sa.StreamFormat.IsVideo() || audio == nil || video == nil {
 			return nil, xerrors.New("open file failed with ffprobe")
 		}
-		if video.CodecName == "h264" && sa.Scale == 0 {
-			sa.Video = "copy"
-		}
 
+		//check scale before codec check
 		if sa.Scale != 0 {
 			if video.Height != nil && *video.Height < int64(sa.Scale) {
 				//pass when video is smaller then input
 				sa.Scale = 0
 			}
+		}
+
+		if video.CodecName == "h264" && sa.Scale == 0 {
+			sa.Video = "copy"
 		}
 
 		if audio.CodecName == "aac" {

@@ -9,7 +9,7 @@ func TestFFMpegRun(t *testing.T) {
 	//ctx.Add(1)
 
 	func() {
-		f, e := FFMpegSplitToM3U8WithProbe(ctx, "/mnt/d/video/女大学生的沙龙室.Room.Salon.College.Girls.2018.HD720P.X264.AAC.Korean.CHS.mp4", OutputOption("tmp"))
+		f, e := FFMpegSplitToM3U8WithProbe(ctx, "D:\\workspace\\goproject\\go-ffmpeg-cmd\\周杰伦唱歌贼难听.2019.1080P.h264.aac.Japanese.None..mp4", ScaleOption(1080), OutputOption("tmp"))
 		log.Info(f)
 		log.Error(e)
 	}()
