@@ -13,6 +13,7 @@ import (
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=%s -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 
 // SplitArgs ...
 type SplitArgs struct {
@@ -210,7 +211,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		if !sa.StreamFormat.IsVideo() || audio == nil || video == nil {
 			return nil, xerrors.New("open file failed with ffprobe")
 		}
-		if video.CodecName == "h264" {
+		if video.CodecName == "h264" && sa.Scale == "" {
 			sa.Video = "copy"
 		}
 		if audio.CodecName == "aac" {
@@ -232,6 +233,9 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	m3u8 := filepath.Join(sa.Output, sa.M3U8)
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
+	if sa.Scale != "" {
+		tpl = fmt.Sprintf(sliceM3u8ScaleTemplate, file, sa.Video, sa.Audio, sa.Scale, sa.HLSTime, sfn, m3u8)
+	}
 
 	if err := FFMpegRun(ctx, tpl); err != nil {
 		return nil, err
