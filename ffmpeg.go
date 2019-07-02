@@ -13,13 +13,13 @@ import (
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
-const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=%s -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=-2:%d -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 
 // SplitArgs ...
 type SplitArgs struct {
 	StreamFormat    *StreamFormat
 	Auto            bool
-	Scale           string
+	Scale           int
 	Start           string
 	End             string
 	Output          string
@@ -120,7 +120,7 @@ func HLSTimeOption(i int) SplitOptions {
 }
 
 // ScaleOption ...
-func ScaleOption(s string, v ...string) SplitOptions {
+func ScaleOption(s int, v ...string) SplitOptions {
 	return func(args *SplitArgs) {
 		args.Video = "libx264"
 		for _, value := range v {
@@ -211,9 +211,17 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		if !sa.StreamFormat.IsVideo() || audio == nil || video == nil {
 			return nil, xerrors.New("open file failed with ffprobe")
 		}
-		if video.CodecName == "h264" && sa.Scale == "" {
+		if video.CodecName == "h264" && sa.Scale == 0 {
 			sa.Video = "copy"
 		}
+
+		if sa.Scale != 0 {
+			if video.Height != nil && *video.Height < int64(sa.Scale) {
+				//pass when video is smaller then input
+				sa.Scale = 0
+			}
+		}
+
 		if audio.CodecName == "aac" {
 			sa.Audio = "copy"
 		}
@@ -233,7 +241,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 	m3u8 := filepath.Join(sa.Output, sa.M3U8)
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
-	if sa.Scale != "" {
+	if sa.Scale != 0 {
 		tpl = fmt.Sprintf(sliceM3u8ScaleTemplate, file, sa.Video, sa.Audio, sa.Scale, sa.HLSTime, sfn, m3u8)
 	}
 
