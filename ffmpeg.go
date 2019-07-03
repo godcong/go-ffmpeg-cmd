@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/xerrors"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -19,7 +21,7 @@ const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_
 type SplitArgs struct {
 	StreamFormat    *StreamFormat
 	Auto            bool
-	Scale           int
+	Scale           int64
 	Start           string
 	End             string
 	Output          string
@@ -29,6 +31,7 @@ type SplitArgs struct {
 	SegmentFileName string
 	HLSTime         int
 	probe           func(string) (*StreamFormat, error)
+	BitRate         int64
 }
 
 // FFmpegContext ...
@@ -120,7 +123,7 @@ func HLSTimeOption(i int) SplitOptions {
 }
 
 // ScaleOption ...
-func ScaleOption(s int, v ...string) SplitOptions {
+func ScaleOption(s int64, v ...string) SplitOptions {
 	return func(args *SplitArgs) {
 		args.Video = "libx264"
 		for _, value := range v {
@@ -162,6 +165,13 @@ func AudioOption(s string) SplitOptions {
 func StreamFormatOption(s *StreamFormat) SplitOptions {
 	return func(args *SplitArgs) {
 		args.StreamFormat = s
+	}
+}
+
+// BitRateOption ...
+func BitRateOption(b int64) SplitOptions {
+	return func(args *SplitArgs) {
+		args.BitRate = b
 	}
 }
 
@@ -214,9 +224,21 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 
 		//check scale before codec check
 		if sa.Scale != 0 {
-			if video.Height != nil && *video.Height < int64(sa.Scale) {
+			if video.Height != nil && *video.Height < sa.Scale {
 				//pass when video is smaller then input
 				sa.Scale = 0
+			}
+		}
+
+		i, e := strconv.ParseInt(video.BitRate, 10, 64)
+		if e != nil {
+			log.Error(e)
+			i = math.MaxInt64
+		}
+
+		if sa.BitRate != 0 {
+			if sa.BitRate > i {
+				sa.BitRate = 0
 			}
 		}
 
