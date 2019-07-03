@@ -15,7 +15,10 @@ import (
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
-const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=-2:%d -r -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb %s -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const scaleOutputTemplate = "-vf scale=-2:%d"
+const bitRateOutputTemplate = "-b:v %dK"
+const frameRateOutputTemplate = "-r %3.2f"
 
 // SplitArgs ...
 type SplitArgs struct {
@@ -189,55 +192,100 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	return FFMpegSplitToM3U8(ctx, file, args...)
 }
 
-// Scale480P ...
-const Scale480P = iota
+// Scale ...
+const (
+	Scale480P  = 0
+	Scale720P  = 1
+	Scale1080P = 2
+)
 
-// Scale720P ...
-const Scale720P = iota
+var bitRateList = []int64{
+	//Scale480P:  1000 * 1024,
+	//Scale720P:  2000 * 1024,
+	//Scale1080P: 4000 * 1024,
+	Scale480P:  500 * 1024,
+	Scale720P:  1000 * 1024,
+	Scale1080P: 2000 * 1024,
+}
 
-// Scale1080P ...
-const Scale1080P = iota
+var frameRateList = []float64{
+	Scale480P:  float64(24000)/1001 - 0.005,
+	Scale720P:  float64(24000)/1001 - 0.005,
+	Scale1080P: float64(30000)/1001 - 0.005,
+}
 
-// ScaleOptimize ...
-func scaleOptimize(sa *SplitArgs, video *Stream) {
+func scaleIndex(scale int64) int {
+	if scale == 480 {
+		return Scale480P
+	} else if scale == 1080 {
+		return Scale1080P
+	}
+	return Scale720P
+}
+
+func outputScale(sa *SplitArgs) string {
+	outputs := []string{fmt.Sprintf(scaleOutputTemplate, sa.Scale)}
+
+	if sa.BitRate != 0 {
+		outputs = append(outputs, fmt.Sprintf(bitRateOutputTemplate, sa.BitRate/1024))
+	}
+	log.Info(sa.FrameRate)
+	if sa.FrameRate > 0 {
+		outputs = append(outputs, fmt.Sprintf(frameRateOutputTemplate, sa.FrameRate))
+	}
+	log.Info("output:", strings.Join(outputs, " "))
+	return strings.Join(outputs, " ")
+}
+
+// optimizeScale ...
+func optimizeScale(sa *SplitArgs, video *Stream) {
 	if sa.Scale != 0 {
 		if video.Height != nil && *video.Height < sa.Scale {
 			//pass when video is smaller then input
 			sa.Scale = 0
+			return
 		}
 
+		idx := scaleIndex(sa.Scale)
 		i, e := strconv.ParseInt(video.BitRate, 10, 64)
 		if e != nil {
 			log.Error(e)
 			i = math.MaxInt64
 		}
 
+		if sa.BitRate == 0 {
+			sa.BitRate = bitRateList[idx]
+		}
 		if sa.BitRate != 0 {
 			if sa.BitRate > i {
 				sa.BitRate = 0
 			}
 		}
-
+		log.Info(video.RFrameRate)
 		fr := strings.Split(video.RFrameRate, "/")
-		il := float64(1)
-		ir := float64(1)
-		if len(fr) > 2 {
-			il, e = strconv.ParseFloat(fr[0], 64)
+		il := 1
+		ir := 1
+		if len(fr) == 2 {
+			il, e = strconv.Atoi(fr[0])
 			if e != nil {
+				il = 1
 				log.Error(e)
 			}
-			ir, e = strconv.ParseFloat(fr[1], 64)
+			ir, e = strconv.Atoi(fr[1])
 			if e != nil {
+				ir = 1
 				log.Error(e)
 			}
 		}
-
+		if sa.FrameRate == 0 {
+			sa.FrameRate = frameRateList[idx]
+		}
+		log.Info(sa.FrameRate, il, ir, il/ir)
 		if sa.FrameRate > 0 {
-			if sa.FrameRate > (il / ir) {
-				sa.FrameRate = il / ir
+			if sa.FrameRate > float64(il)/float64(ir) {
+				sa.FrameRate = 0
 			}
 		}
-
 	}
 }
 
@@ -282,7 +330,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		}
 
 		//check scale before codec check
-		scaleOptimize(sa, video)
+		optimizeScale(sa, video)
 
 		if video.CodecName == "h264" && sa.Scale == 0 {
 			sa.Video = "copy"
@@ -308,7 +356,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 
 	tpl := fmt.Sprintf(sliceM3u8FFmpegTemplate, file, sa.Video, sa.Audio, sa.HLSTime, sfn, m3u8)
 	if sa.Scale != 0 {
-		tpl = fmt.Sprintf(sliceM3u8ScaleTemplate, file, sa.Video, sa.Audio, sa.Scale, sa.HLSTime, sfn, m3u8)
+		tpl = fmt.Sprintf(sliceM3u8ScaleTemplate, file, sa.Video, sa.Audio, outputScale(sa), sa.HLSTime, sfn, m3u8)
 	}
 
 	if err := FFMpegRun(ctx, tpl); err != nil {
