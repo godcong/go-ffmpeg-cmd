@@ -6,7 +6,7 @@ import (
 
 // TestFormat_NameAnalyze ...
 func TestFormat_NameAnalyze(t *testing.T) {
-	sf1, e := FFProbeStreamFormat("d:\\video\\周杰伦唱歌贼难听.2019.1080P.h264.aac.Japanese.None.mp4")
+	sf1, e := FFProbeStreamFormat("d:\\video\\极乐女忍者.LADY.NINJA.2018.HD1080P.X264.AAC.Japanese.CHT.mp4")
 
 	if e != nil {
 		log.Error(e)

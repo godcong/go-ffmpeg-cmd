@@ -15,7 +15,7 @@ import (
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
-const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=-2:%d -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
+const sliceM3u8ScaleTemplate = `-y -i %s -strict -2 -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vf scale=-2:%d -r -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`
 
 // SplitArgs ...
 type SplitArgs struct {
@@ -32,6 +32,7 @@ type SplitArgs struct {
 	HLSTime         int
 	probe           func(string) (*StreamFormat, error)
 	BitRate         int64
+	FrameRate       float64
 }
 
 // FFmpegContext ...
@@ -188,6 +189,64 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	return FFMpegSplitToM3U8(ctx, file, args...)
 }
 
+// Scale480P ...
+const Scale480P = iota
+
+// Scale720P ...
+const Scale720P = iota
+
+// Scale1080P ...
+const Scale1080P = iota
+
+// ScaleOptimize ...
+func scaleOptimize(sa *SplitArgs, video *Stream) {
+	if sa.Scale != 0 {
+		if video.Height != nil && *video.Height < sa.Scale {
+			//pass when video is smaller then input
+			sa.Scale = 0
+		}
+
+		i, e := strconv.ParseInt(video.BitRate, 10, 64)
+		if e != nil {
+			log.Error(e)
+			i = math.MaxInt64
+		}
+
+		if sa.BitRate != 0 {
+			if sa.BitRate > i {
+				sa.BitRate = 0
+			}
+		}
+
+		fr := strings.Split(video.RFrameRate, "/")
+		il := float64(1)
+		ir := float64(1)
+		if len(fr) > 2 {
+			il, e = strconv.ParseFloat(fr[0], 64)
+			if e != nil {
+				log.Error(e)
+			}
+			ir, e = strconv.ParseFloat(fr[1], 64)
+			if e != nil {
+				log.Error(e)
+			}
+		}
+
+		if sa.FrameRate > 0 {
+			if sa.FrameRate > (il / ir) {
+				sa.FrameRate = il / ir
+			}
+		}
+
+	}
+}
+
+// FFMpegSplitToM3U8WithOptimize ...
+func FFMpegSplitToM3U8WithOptimize(ctx Context, file string, args ...SplitOptions) (sa *SplitArgs, e error) {
+	args = append(args, ProbeInfoOption(FFProbeStreamFormat))
+	return FFMpegSplitToM3U8(ctx, file, args...)
+}
+
 // FFMpegSplitToM3U8 ...
 func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *SplitArgs, e error) {
 	if strings.Index(file, " ") != -1 {
@@ -223,24 +282,7 @@ func FFMpegSplitToM3U8(ctx Context, file string, args ...SplitOptions) (sa *Spli
 		}
 
 		//check scale before codec check
-		if sa.Scale != 0 {
-			if video.Height != nil && *video.Height < sa.Scale {
-				//pass when video is smaller then input
-				sa.Scale = 0
-			}
-		}
-
-		i, e := strconv.ParseInt(video.BitRate, 10, 64)
-		if e != nil {
-			log.Error(e)
-			i = math.MaxInt64
-		}
-
-		if sa.BitRate != 0 {
-			if sa.BitRate > i {
-				sa.BitRate = 0
-			}
-		}
+		scaleOptimize(sa, video)
 
 		if video.CodecName == "h264" && sa.Scale == 0 {
 			sa.Video = "copy"
