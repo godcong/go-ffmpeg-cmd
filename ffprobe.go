@@ -147,6 +147,21 @@ func FFProbeStreamFormat(filename string) (*StreamFormat, error) {
 	return &sf, nil
 }
 
+// ResolutionInt ...
+func (f *StreamFormat) ResolutionInt() int {
+	idx := 0
+	for _, s := range f.Streams {
+		if s.CodecType == "video" {
+			if s.Height != nil {
+				idx = getResolutionIndex(*s.Height, 0, -1)
+				break
+			}
+
+		}
+	}
+	return resolution[idx]
+}
+
 // Resolution ...
 func (f *StreamFormat) Resolution() string {
 	idx := 0
@@ -159,7 +174,7 @@ func (f *StreamFormat) Resolution() string {
 
 		}
 	}
-	return strconv.FormatInt(int64(resolution[idx]), 10) + "P"
+	return strconv.FormatInt(int64(resolution[idx]), 10)
 }
 
 // Video ...
