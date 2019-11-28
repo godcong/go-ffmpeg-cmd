@@ -1,4 +1,4 @@
-module github.com/godcong/go-ffmpeg-cmd
+module github.com/glvd/go-fftool
 
 go 1.12
 
