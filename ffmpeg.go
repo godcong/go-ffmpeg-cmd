@@ -193,35 +193,13 @@ func FFMpegSplitToM3U8WithProbe(ctx Context, file string, args ...SplitOptions) 
 	return FFMpegSplitToM3U8(ctx, file, args...)
 }
 
-// Scale ...
-const (
-	Scale480P  = 0
-	Scale720P  = 1
-	Scale1080P = 2
-)
-
-var bitRateList = []int64{
-	//Scale480P:  1000 * 1024,
-	//Scale720P:  2000 * 1024,
-	//Scale1080P: 4000 * 1024,
-	Scale480P:  500 * 1024,
-	Scale720P:  1000 * 1024,
-	Scale1080P: 2000 * 1024,
-}
-
-var frameRateList = []float64{
-	Scale480P:  float64(24000)/1001 - 0.005,
-	Scale720P:  float64(24000)/1001 - 0.005,
-	Scale1080P: float64(30000)/1001 - 0.005,
-}
-
 func scaleIndex(scale int64) int {
 	if scale == 480 {
-		return Scale480P
+		return int(Scale480P)
 	} else if scale == 1080 {
-		return Scale1080P
+		return int(Scale1080P)
 	}
-	return Scale720P
+	return int(Scale720P)
 }
 
 func outputScale(sa *SplitArgs) string {
