@@ -1,5 +1,0 @@
-package fftool
-
-func NewProcess() {
-
-}
