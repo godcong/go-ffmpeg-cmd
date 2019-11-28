@@ -25,11 +25,22 @@ var frameRateList = []float64{
 }
 
 type Config struct {
-	Scale Scale
+	Scale     Scale
+	BitRate   int64
+	FrameRate float64
 }
 
 func DefaultConfig() Config {
 	return Config{
 		Scale: Scale720P,
+	}
+}
+
+func (c *Config) init() {
+	if c.BitRate == 0 {
+		c.BitRate = bitRateList[c.Scale]
+	}
+	if c.FrameRate == 0 {
+		c.FrameRate = frameRateList[c.Scale]
 	}
 }
