@@ -3,14 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"golang.org/x/xerrors"
 	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
+	"golang.org/x/xerrors"
 )
 
 //const sliceM3u8FFmpegTemplate = `-y -i %s -strict -2 -ss %s -to %s -c:v %s -c:a %s -bsf:v h264_mp4toannexb -vsync 0 -f hls -hls_list_size 0 -hls_time %d -hls_segment_filename %s %s`

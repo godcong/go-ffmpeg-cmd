@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"bufio"
-	"github.com/godcong/go-trait"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/godcong/go-trait"
 )
 
 var log = trait.NewZapSugar()
